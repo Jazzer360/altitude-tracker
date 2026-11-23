@@ -16,12 +16,11 @@ Private, installable (PWA) cannabis-use self-tracker. Firebase Hosting + Auth (G
 3. **Auth** → Sign-in method → enable **Google**.
 4. **Firestore** → Create database (production mode; any region, `us-central1` matches the functions).
 5. **Hosting** → Get started (just to enable; deploy comes from CI).
-6. Project settings → Your apps → **Add web app** → copy config values.
-7. **Auth domain**: set `VITE_FIREBASE_AUTH_DOMAIN` to `<project-id>.web.app` (not `.firebaseapp.com`) so Google sign-in works inside the installed iPhone app. Add that domain under Auth → Settings → Authorized domains if missing.
-8. **Service account for CI**: Google Cloud console → IAM → Service accounts → create `github-deploy` with roles: Firebase Admin, Cloud Functions Admin, Service Account User, Cloud Build Editor, Artifact Registry Administrator. Keys → Add key → JSON.
-9. **GitHub repo secrets** (Settings → Secrets and variables → Actions):
-   `FIREBASE_SERVICE_ACCOUNT` (the JSON), `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`.
-10. Edit `.firebaserc` → replace `demo-altitude` with your project ID. Push to `main` → Action tests then deploys.
+6. Project settings → Your apps → **Add web app** → copy the `firebaseConfig` block. Put the values in `.env.production` (committed; these values are public by design and ship in the app anyway), **except** set `VITE_FIREBASE_AUTH_DOMAIN=<project-id>.web.app` instead of `.firebaseapp.com` so Google sign-in works in the installed iPhone app. Set the same project ID in `.firebaserc`.
+7. Auth → Settings → **Authorized domains**: confirm `<project-id>.web.app` is listed (usually automatic).
+8. **Service account for CI**: Google Cloud console → IAM & Admin → Service accounts → Create `github-deploy` with roles: Firebase Admin, Cloud Functions Admin, Service Account User, Cloud Build Editor, Artifact Registry Administrator. Then the account → Keys → Add key → JSON (downloads a file).
+9. GitHub repo → Settings → Secrets and variables → Actions → New repository secret: name `FIREBASE_SERVICE_ACCOUNT`, value = entire contents of that JSON file. This is the only secret.
+10. Push to `main` → Action tests then deploys.
 
 (First functions deploy may ask to enable APIs; if the Action fails on that, run `npx firebase deploy` once locally after `npx firebase login`.)
 
