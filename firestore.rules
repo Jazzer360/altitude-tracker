@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function optEnum(v, allowed) { return v == null || v in allowed; }
+
+    function validLog(d) {
+      let methods = ['flower', 'vape', 'dab', 'edible', 'other'];
+      let reasons = ['stress', 'bored', 'social', 'sleep', 'habit', 'down', 'fun', 'pain', 'craving'];
+      let keys = ['kind', 'at', 'placeId', 'placeLabel', 'method', 'altitude', 'reasons', 'with', 'amount', 'moodBefore', 'note'];
+      return d.keys().hasOnly(keys) && d.keys().hasAll(keys)
+        && d.kind in ['use', 'urge_skipped']
+        && d.at is timestamp
+        && d.at < request.time + duration.value(1, 'h')
+        && (d.kind == 'urge_skipped' || (d.method in methods && d.altitude is int && d.altitude >= 1 && d.altitude <= 5))
+        && optEnum(d.method, methods)
+        && d.reasons is list && d.reasons.size() <= 9 && d.reasons.toSet().difference(reasons.toSet()).size() == 0
+        && optEnum(d.with, ['alone', 'friends', 'partner', 'family'])
+        && optEnum(d.amount, ['small', 'medium', 'large'])
+        && (d.moodBefore == null || (d.moodBefore is int && d.moodBefore >= 1 && d.moodBefore <= 5))
+        && (d.note == null || (d.note is string && d.note.size() <= 500))
+        && (d.placeLabel == null || (d.placeLabel is string && d.placeLabel.size() <= 40));
+    }
+
+    match /users/{uid} {
+      // shareToken is server-managed (Cloud Functions); clients may not set or change it.
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.firstName is string && request.resource.data.firstName.size() >= 1 && request.resource.data.firstName.size() <= 40
+        && request.resource.data.shareToken == null;
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['shareToken', 'createdAt'])
+        && request.resource.data.firstName is string && request.resource.data.firstName.size() >= 1 && request.resource.data.firstName.size() <= 40;
+      allow delete: if false;
+
+      match /logs/{logId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validLog(request.resource.data);
+      }
+      match /places/{placeId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 30
+          && request.resource.data.lat is number && request.resource.data.lng is number
+          && request.resource.data.radiusM is number && request.resource.data.radiusM <= 1000;
+      }
+    }
+
+    // Token → uid lookup. Admin SDK only.
+    match /shares/{token} { allow read, write: if false; }
+  }
+}
