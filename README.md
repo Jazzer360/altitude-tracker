@@ -18,11 +18,13 @@ Private, installable (PWA) cannabis-use self-tracker. Firebase Hosting + Auth (G
 5. **Hosting** → Get started (just to enable; deploy comes from CI).
 6. Project settings → Your apps → **Add web app** → copy the `firebaseConfig` block. Put the values in `.env.production` (committed; these values are public by design and ship in the app anyway), **except** set `VITE_FIREBASE_AUTH_DOMAIN=<project-id>.web.app` instead of `.firebaseapp.com` so Google sign-in works in the installed iPhone app. Set the same project ID in `.firebaserc`.
 7. Auth → Settings → **Authorized domains**: confirm `<project-id>.web.app` is listed (usually automatic).
+   Also: Google Cloud console → APIs & Services → Credentials → OAuth 2.0 Client IDs → **Web client (auto created by Google Service)** →
+   add Authorized JavaScript origin `https://<project-id>.web.app` and Authorized redirect URI `https://<project-id>.web.app/__/auth/handler`. Without this, sign-in fails with `redirect_uri_mismatch`.
 8. **Service account for CI**: Google Cloud console → IAM & Admin → Service accounts → Create `github-deploy` with roles: Firebase Admin, Cloud Functions Admin, Service Account User, Cloud Build Editor, Artifact Registry Administrator. Then the account → Keys → Add key → JSON (downloads a file).
 9. GitHub repo → Settings → Secrets and variables → Actions → New repository secret: name `FIREBASE_SERVICE_ACCOUNT`, value = entire contents of that JSON file. This is the only secret.
 10. Push to `main` → Action tests then deploys.
 
-(First functions deploy may ask to enable APIs; if the Action fails on that, run `npx firebase deploy` once locally after `npx firebase login`.)
+(First deploy may fail until the Cloud Functions API (and others it names) are enabled; the error includes an enable link. Enable, then Actions → Test & deploy → Run workflow.)
 
 ## Install on phone
 - **iPhone**: open the site in Safari → Share ⬆️ → Add to Home Screen.
